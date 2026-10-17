@@ -34,7 +34,7 @@ In the Vercel project: **Settings → Environment Variables**. Add these for **P
 | Name | Example | Description |
 |------|---------|-------------|
 | `AUTH_SECRET` | *(random 32+ byte string)* | Signs session cookies. Must be ≥ 16 characters. |
-| `DATABASE_PATH` | `/tmp/shareboard.sqlite` | SQLite file path on the function filesystem. Use `/tmp/...` on Vercel for demos only. |
+| `DATABASE_PATH` | `./data/shareboard.prod.sqlite` *(or `/tmp/shareboard.prod.sqlite`)* | You may keep the same `./data/...` value as on a VPS; on Vercel the app remaps it to `/tmp/<filename>` because only `/tmp` is writable. Data is still ephemeral. |
 
 Do **not** commit production secrets. Vercel injects env vars at build and runtime; local `.env` is gitignored.
 

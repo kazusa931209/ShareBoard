@@ -1,5 +1,16 @@
 export function getDatabasePath(): string {
-  return process.env.DATABASE_PATH ?? "./data/shareboard.dev.sqlite";
+  const configured =
+    process.env.DATABASE_PATH ?? "./data/shareboard.dev.sqlite";
+
+  // Vercel serverless: only /tmp is writable; ./data/... in env cannot work.
+  if (process.env.VERCEL && !configured.startsWith("/tmp/")) {
+    const base = configured.replace(/^(\.\/)?/, "").split("/").pop();
+    const fileName =
+      base && base.endsWith(".sqlite") ? base : "shareboard.sqlite";
+    return `/tmp/${fileName}`;
+  }
+
+  return configured;
 }
 
 export function getAuthSecret(): string {
