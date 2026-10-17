@@ -46,7 +46,7 @@ Do **not** commit production secrets. Vercel injects env vars at build and runti
 2. Import your **ShareBoard** Git repository.
 3. **Framework Preset:** Next.js (auto-detected).
 4. **Build Command:** `npm run build` (default).
-5. **Output Directory:** leave default (Next.js handles this).
+5. **Output Directory:** must be **empty** (override **off**). Do not set `public` — that is for static sites, not Next.js.
 6. **Install Command:** `npm install` (default).
 7. Add [environment variables](#environment-variables).
 8. Click **Deploy**.
@@ -84,7 +84,7 @@ vercel --prod
 | Build command | `npm run build` |
 | Dev command (local) | `npm run dev` |
 
-No custom `vercel.json` is required for a standard Next.js 15 App Router deployment.
+The repo includes `vercel.json` with `"framework": "nextjs"` so Vercel uses the Next.js builder instead of a static `public` output folder.
 
 ## Post-deploy checklist
 
@@ -103,6 +103,18 @@ No custom `vercel.json` is required for a standard Next.js 15 App Router deploym
 Session cookies work on the default `*.vercel.app` host and on custom domains without extra app config.
 
 ## Troubleshooting
+
+### `STATIC_BUILD_NO_OUT_DIR` / No Output Directory named `public`
+
+The Next.js build **succeeded**, but Vercel is treating the project as a **static** site and expecting a `public` build output folder.
+
+1. Open the project on Vercel → **Settings** → **Build and Deployment**.
+2. Set **Framework Preset** to **Next.js**.
+3. Under **Build & Development Settings**, turn **off** the override for **Output Directory**, or clear the field so it is blank (not `public` or `.next`).
+4. **Build Command** should be `npm run build` (or default).
+5. Redeploy (**Deployments** → latest → **Redeploy**).
+
+After pulling the latest repo, `vercel.json` also declares `"framework": "nextjs"` to reduce mis-detection on import.
 
 ### Build fails on `better-sqlite3`
 

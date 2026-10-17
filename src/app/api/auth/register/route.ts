@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { errorResponse } from "@/lib/api";
-import { loginUser, registerUser, setSessionCookie } from "@/lib/auth";
+import { registerUser, setSessionCookie } from "@/lib/auth";
 
 export async function POST(request: Request) {
   let body: unknown;
