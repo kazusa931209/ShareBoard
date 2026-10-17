@@ -31,6 +31,8 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), register a User ID, then use the studio UI: **Board**, **Share with**, or **Settings** in the sidebar.
 
+**Database file (local):** `data/shareboard.dev.sqlite` under this project root (set by `DATABASE_PATH` in `.env.development`). Production uses `data/shareboard.prod.sqlite` by default. The app creates the `data/` folder automatically on first use.
+
 ## Production
 
 1. Copy `.env.example` values into `.env.production` on your server.
@@ -63,7 +65,7 @@ User IDs are compared case-insensitively for login ( `Alice` and `alice` are the
 | `src/lib/db.ts` | SQLite connection and schema |
 | `src/lib/auth.ts` | Password hashing and session cookies |
 | `src/lib/posts.ts` | Board posts |
-| `data/*.sqlite` | Database files (gitignored) |
+| `data/` | SQLite files live here inside the project (gitignored; folder tracked via `data/.gitkeep`) |
 | `.env.example` | Template for env vars |
 | `.env.development` | Local dev settings (committed) |
 | `.env.production` | Production settings (set on server) |
@@ -87,9 +89,14 @@ User IDs are compared case-insensitively for login ( `Alice` and `alice` are the
 
 Sessions use an HTTP-only cookie signed with `AUTH_SECRET`.
 
+## Deployment
+
+- **Vercel:** [doc/vercel.md](doc/vercel.md) — Git import, env vars, and SQLite limitations on serverless.
+- **Long-running server:** [Production](#production) below (recommended for persistent SQLite).
+
 ## Share with friends
 
-1. Deploy the app (VPS, Railway, Fly.io, etc.) or run it on your home network.
+1. Deploy the app (VPS, Railway, Fly.io, Vercel for demos, etc.) or run it on your home network.
 2. Send them the URL, plus a note to **register** their own User ID.
 3. Everyone sees the same board after logging in.
 

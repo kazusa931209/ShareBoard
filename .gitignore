@@ -34,8 +34,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 
-# sqlite data
-/data/
+# sqlite data (keeps data/ in the repo; database files stay local)
+/data/*
+!/data/.gitkeep
 *.sqlite
 *.sqlite-wal
 *.sqlite-shm
