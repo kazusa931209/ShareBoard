@@ -611,6 +611,14 @@ select {
   background: var(--table-row-deleted);
 }
 
+.board-row--clickable {
+  cursor: pointer;
+}
+
+.board-row--clickable:hover:not(.board-row--deleted) {
+  background: var(--table-row-hover);
+}
+
 .board-cell-title,
 .board-cell-url {
   white-space: pre-wrap;
@@ -652,6 +660,14 @@ select {
   width: 9.25rem;
   min-width: 9.25rem;
   max-width: 9.25rem;
+}
+
+.board-title-line {
+  display: block;
+}
+
+.board-url-mobile {
+  display: none;
 }
 
 .board-cell-url a {
@@ -737,6 +753,81 @@ select {
   margin-right: 0.25rem;
 }
 
+/* Compact board table (No, Title/URL, Like, Actions) up to typical 1440px displays */
+@media (max-width: 1440px) {
+  .board-table-wrap--list .board-col-url,
+  .board-table-wrap--list .board-col-content,
+  .board-table-wrap--list .board-col-other,
+  .board-table-wrap--list .board-col-poster,
+  .board-table-wrap--list .board-col-datetime,
+  .board-table-wrap--list .board-col-desktop-only {
+    display: none;
+  }
+
+  .board-table-wrap--list thead .board-col-title {
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .board-table-wrap--list thead .board-col-title::after {
+    content: "Title / URL";
+    font-size: 0.8rem;
+    font-weight: 600;
+    line-height: normal;
+    color: var(--muted);
+  }
+
+  .board-table-wrap--list .board-col-title {
+    min-width: 0;
+    max-width: none;
+    width: auto;
+  }
+
+  .board-url-mobile {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.75rem;
+    line-height: 1.35;
+    word-break: break-word;
+  }
+
+  .board-url-mobile a {
+    color: var(--link);
+    text-decoration: underline;
+  }
+
+  .board-table-wrap--list .board-col-like {
+    width: 4.75rem;
+    min-width: 4.75rem;
+    max-width: 4.75rem;
+  }
+
+  .board-table-wrap--list .board-like-block-btn {
+    min-width: 0;
+    width: 2.25rem;
+    padding: 0;
+  }
+
+  .board-table-wrap--list .board-like-block-btn span {
+    display: none;
+  }
+
+  .board-table-wrap--list .board-like-users {
+    display: none;
+  }
+
+  .board-table-wrap--list .board-col-actions {
+    width: 5.5rem;
+    min-width: 5.5rem;
+    max-width: 5.5rem;
+  }
+
+  .board-table-wrap--list .board-cell-actions .btn {
+    padding: 0.25rem 0.35rem !important;
+    font-size: 0.7rem !important;
+  }
+}
+
 .board-pagination {
   display: flex;
   flex-wrap: wrap;
@@ -780,7 +871,7 @@ select {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(420px, 100vw);
+  width: min(840px, 100vw);
   background: var(--elevated);
   border-left: 1px solid var(--border);
   box-shadow: var(--shadow-lg);
@@ -830,6 +921,40 @@ select {
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 0.5rem;
+}
+
+.board-view-fields {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.board-view-field {
+  margin: 0;
+}
+
+.board-view-field dt {
+  margin: 0 0 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.board-view-field dd {
+  margin: 0;
+  word-break: break-word;
+}
+
+.board-view-field dd a {
+  color: var(--link);
+  text-decoration: underline;
+}
+
+.board-view-text {
+  white-space: pre-wrap;
 }
 
 /* —— Public auth pages —— */

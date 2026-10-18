@@ -1,7 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { BoardDrawer, type BoardFormValues } from "@/components/studio/BoardDrawer";
+import { useCallback, useEffect, useState, type MouseEvent } from "react";
+import {
+  BoardDrawer,
+  type BoardDrawerMode,
+  type BoardFormValues,
+} from "@/components/studio/BoardDrawer";
 import {
   DataTable,
   FilterKeywordField,
@@ -71,9 +75,11 @@ export function BoardListSection({
   const [data, setData] = useState<ListResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  /** Bumped on Search so a refetch runs even when filters/page are unchanged. */
+  const [listVersion, setListVersion] = useState(0);
 
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState<"add" | "edit">("add");
+  const [drawerMode, setDrawerMode] = useState<BoardDrawerMode>("add");
   const [editingRow, setEditingRow] = useState<BoardRow | null>(null);
   const [drawerError, setDrawerError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -116,12 +122,13 @@ export function BoardListSection({
 
   useEffect(() => {
     void fetchBoards();
-  }, [fetchBoards]);
+  }, [fetchBoards, listVersion]);
 
   function handleSearch() {
     setApplied(filters);
     setPage(1);
     setPageInput("1");
+    setListVersion((v) => v + 1);
   }
 
   function handleReset() {
@@ -146,11 +153,22 @@ export function BoardListSection({
     setDrawerOpen(true);
   }
 
+  function openView(row: BoardRow) {
+    setDrawerMode("view");
+    setEditingRow(row);
+    setDrawerError(null);
+    setDrawerOpen(true);
+  }
+
   function openEdit(row: BoardRow) {
     setDrawerMode("edit");
     setEditingRow(row);
     setDrawerError(null);
     setDrawerOpen(true);
+  }
+
+  function stopRowClick(event: MouseEvent) {
+    event.stopPropagation();
   }
 
   async function submitDrawer(values: BoardFormValues) {
@@ -322,7 +340,12 @@ export function BoardListSection({
                   return (
                     <tr
                       key={row.id}
-                      className={row.isDeleted ? "board-row--deleted" : undefined}
+                      className={
+                        row.isDeleted
+                          ? "board-row--deleted board-row--clickable"
+                          : "board-row--clickable"
+                      }
+                      onClick={() => openView(row)}
                     >
                       <td className={BOARD_TABLE_COLUMN_CLASSES[0]}>
                         {rowNo}
@@ -330,10 +353,28 @@ export function BoardListSection({
                       <td
                         className={`${BOARD_TABLE_COLUMN_CLASSES[1]} board-cell-title`}
                       >
-                        {row.title}
+                        <span className="board-title-line">{row.title}</span>
+                        <span
+                          className="board-url-mobile"
+                          onClick={stopRowClick}
+                          onKeyDown={(e) => e.stopPropagation()}
+                        >
+                          {row.url ? (
+                            <a
+                              href={row.url}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              {row.url}
+                            </a>
+                          ) : (
+                            <span className="muted">—</span>
+                          )}
+                        </span>
                       </td>
                       <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[2]} board-cell-url`}
+                        className={`${BOARD_TABLE_COLUMN_CLASSES[2]} board-cell-url board-col-desktop-only`}
+                        onClick={stopRowClick}
                       >
                         {row.url ? (
                           <a href={row.url} target="_blank" rel="noreferrer">
@@ -344,7 +385,7 @@ export function BoardListSection({
                         )}
                       </td>
                       <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[3]} board-cell-text`}
+                        className={`${BOARD_TABLE_COLUMN_CLASSES[3]} board-cell-text board-col-desktop-only`}
                         title={
                           row.content.length > TEXT_PREVIEW_LENGTH
                             ? row.content
@@ -354,7 +395,7 @@ export function BoardListSection({
                         {truncateText(row.content, TEXT_PREVIEW_LENGTH)}
                       </td>
                       <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[4]} board-cell-text`}
+                        className={`${BOARD_TABLE_COLUMN_CLASSES[4]} board-cell-text board-col-desktop-only`}
                         title={
                           row.other && row.other.length > TEXT_PREVIEW_LENGTH
                             ? row.other
@@ -365,11 +406,14 @@ export function BoardListSection({
                           ? truncateText(row.other, TEXT_PREVIEW_LENGTH)
                           : "—"}
                       </td>
-                      <td className={BOARD_TABLE_COLUMN_CLASSES[5]}>
+                      <td
+                        className={`${BOARD_TABLE_COLUMN_CLASSES[5]} board-col-desktop-only`}
+                      >
                         {row.posterUserId}
                       </td>
                       <td
                         className={`${BOARD_TABLE_COLUMN_CLASSES[6]} board-cell-like`}
+                        onClick={stopRowClick}
                       >
                         <div className="board-like-cell">
                           <button
@@ -380,7 +424,10 @@ export function BoardListSection({
                                 : "board-like-block-btn"
                             }
                             disabled={row.isDeleted || isOwner}
-                            onClick={() => void toggleLike(row)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              void toggleLike(row);
+                            }}
                             title={
                               isOwner
                                 ? "You cannot like your own post"
@@ -412,11 +459,14 @@ export function BoardListSection({
                           </span>
                         </div>
                       </td>
-                      <td className={BOARD_TABLE_COLUMN_CLASSES[7]}>
+                      <td
+                        className={`${BOARD_TABLE_COLUMN_CLASSES[7]} board-col-desktop-only`}
+                      >
                         {formatBoardDateTime(row.postDatetime)}
                       </td>
                       <td
                         className={`${BOARD_TABLE_COLUMN_CLASSES[8]} board-cell-actions`}
+                        onClick={stopRowClick}
                       >
                         {isOwner && !row.isDeleted ? (
                           <>
