@@ -1,10 +1,8 @@
 import { getSessionUser } from "@/lib/auth";
-import { errorResponse, jsonResponse } from "@/lib/api";
+import { errorResponse, jsonResponse, withDbHandlerContext } from "@/lib/api";
 import { toggleBoardLike } from "@/lib/boards";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function POST(_request: Request, context: RouteContext) {
+export const POST = withDbHandlerContext(async (_request, context) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in required.", 401);
@@ -16,10 +14,10 @@ export async function POST(_request: Request, context: RouteContext) {
     return errorResponse("Invalid board id.");
   }
 
-  const result = toggleBoardLike(boardId, session.id);
+  const result = await toggleBoardLike(boardId, session.id);
   if (result.error) {
     return errorResponse(result.error, 400);
   }
 
   return jsonResponse({ liked: result.liked });
-}
+});

@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { sqlAll, sqlGet, sqlRun } from "@/lib/sql";
 import {
   validateBoardInput,
   type BoardInput,
@@ -57,22 +57,20 @@ const VIEWER_ACCESS_SQL = `(b.user_id = ? OR EXISTS (
   WHERE s.owner_user_id = b.user_id AND s.target_user_id = ?
 ))`;
 
-function viewerCanAccessBoard(
+async function viewerCanAccessBoard(
   posterUserDbId: number,
   viewerUserDbId: number,
-): boolean {
+): Promise<boolean> {
   if (posterUserDbId === viewerUserDbId) {
     return true;
   }
-  const db = getDb();
-  const row = db
-    .prepare(
-      `
-      SELECT 1 FROM share_with
+  const row = await sqlGet(
+    `
+      SELECT 1 AS ok FROM share_with
       WHERE owner_user_id = ? AND target_user_id = ?
     `,
-    )
-    .get(posterUserDbId, viewerUserDbId);
+    [posterUserDbId, viewerUserDbId],
+  );
   return Boolean(row);
 }
 
@@ -177,12 +175,12 @@ const SELECT_BODY = `
   WHERE
 `;
 
-export function listBoards(params: ListBoardsParams): ListBoardsResult {
+export async function listBoards(
+  params: ListBoardsParams,
+): Promise<ListBoardsResult> {
   const page = Math.max(1, params.page);
   const pageSize = Math.min(100, Math.max(1, params.pageSize));
   const { where, bindings } = buildListQuery(params);
-
-  const db = getDb();
 
   const countSql = `
     SELECT COUNT(*) AS total
@@ -190,8 +188,8 @@ export function listBoards(params: ListBoardsParams): ListBoardsResult {
     INNER JOIN users u ON u.id = b.user_id
     WHERE ${where}
   `;
-  const countRow = db.prepare(countSql).get(...bindings) as { total: number };
-  const total = countRow.total;
+  const countRow = await sqlGet<{ total: number }>(countSql, bindings);
+  const total = countRow?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const offset = (safePage - 1) * pageSize;
@@ -202,9 +200,12 @@ export function listBoards(params: ListBoardsParams): ListBoardsResult {
     ORDER BY b.is_deleted ASC, b.post_datetime DESC
     LIMIT ? OFFSET ?
   `;
-  const rows = db
-    .prepare(dataSql)
-    .all(params.viewerUserDbId, ...bindings, pageSize, offset) as BoardDbRow[];
+  const rows = await sqlAll<BoardDbRow>(dataSql, [
+    params.viewerUserDbId,
+    ...bindings,
+    pageSize,
+    offset,
+  ]);
 
   return {
     items: rows.map(mapRow),
@@ -215,51 +216,51 @@ export function listBoards(params: ListBoardsParams): ListBoardsResult {
   };
 }
 
-export function createBoard(
+export async function createBoard(
   userDbId: number,
   input: BoardInput,
-): { board?: BoardRow; error?: string } {
+): Promise<{ board?: BoardRow; error?: string }> {
   const err = validateBoardInput(input);
   if (err) {
     return { error: err };
   }
 
-  const db = getDb();
-  const insert = db
-    .prepare(
-      `
+  const insert = await sqlGet<{ id: number }>(
+    `
       INSERT INTO boards (user_id, title, url, content, other, post_datetime)
       VALUES (?, ?, ?, ?, ?, datetime('now'))
       RETURNING id
     `,
-    )
-    .get(
+    [
       userDbId,
       input.title.trim(),
       input.url?.trim() || null,
       input.content.trim(),
       input.other?.trim() || null,
-    ) as { id: number };
+    ],
+  );
+
+  if (!insert) {
+    return { error: "Could not create post." };
+  }
 
   return getBoardById(insert.id, userDbId);
 }
 
-export function updateBoard(
+export async function updateBoard(
   boardId: number,
   userDbId: number,
   input: BoardInput,
-): { board?: BoardRow; error?: string } {
+): Promise<{ board?: BoardRow; error?: string }> {
   const err = validateBoardInput(input);
   if (err) {
     return { error: err };
   }
 
-  const db = getDb();
-  const existing = db
-    .prepare(
-      "SELECT user_id, is_deleted FROM boards WHERE id = ?",
-    )
-    .get(boardId) as { user_id: number; is_deleted: number } | undefined;
+  const existing = await sqlGet<{ user_id: number; is_deleted: number }>(
+    "SELECT user_id, is_deleted FROM boards WHERE id = ?",
+    [boardId],
+  );
 
   if (!existing) {
     return { error: "Board post not found." };
@@ -271,31 +272,32 @@ export function updateBoard(
     return { error: "Deleted posts cannot be edited." };
   }
 
-  db.prepare(
+  await sqlRun(
     `
     UPDATE boards
     SET title = ?, url = ?, content = ?, other = ?, updated_at = datetime('now')
     WHERE id = ?
   `,
-  ).run(
-    input.title.trim(),
-    input.url?.trim() || null,
-    input.content.trim(),
-    input.other?.trim() || null,
-    boardId,
+    [
+      input.title.trim(),
+      input.url?.trim() || null,
+      input.content.trim(),
+      input.other?.trim() || null,
+      boardId,
+    ],
   );
 
   return getBoardById(boardId, userDbId);
 }
 
-export function softDeleteBoard(
+export async function softDeleteBoard(
   boardId: number,
   userDbId: number,
-): { ok: boolean; error?: string } {
-  const db = getDb();
-  const existing = db
-    .prepare("SELECT user_id, is_deleted FROM boards WHERE id = ?")
-    .get(boardId) as { user_id: number; is_deleted: number } | undefined;
+): Promise<{ ok: boolean; error?: string }> {
+  const existing = await sqlGet<{ user_id: number; is_deleted: number }>(
+    "SELECT user_id, is_deleted FROM boards WHERE id = ?",
+    [boardId],
+  );
 
   if (!existing) {
     return { ok: false, error: "Board post not found." };
@@ -307,27 +309,27 @@ export function softDeleteBoard(
     return { ok: true };
   }
 
-  db.prepare(
+  await sqlRun(
     `UPDATE boards SET is_deleted = 1, updated_at = datetime('now') WHERE id = ?`,
-  ).run(boardId);
+    [boardId],
+  );
   return { ok: true };
 }
 
-export function toggleBoardLike(
+export async function toggleBoardLike(
   boardId: number,
   userDbId: number,
-): { liked: boolean; error?: string } {
-  const db = getDb();
-  const board = db
-    .prepare("SELECT id, user_id, is_deleted FROM boards WHERE id = ?")
-    .get(boardId) as
-    | { id: number; user_id: number; is_deleted: number }
-    | undefined;
+): Promise<{ liked: boolean; error?: string }> {
+  const board = await sqlGet<{
+    id: number;
+    user_id: number;
+    is_deleted: number;
+  }>("SELECT id, user_id, is_deleted FROM boards WHERE id = ?", [boardId]);
 
   if (!board) {
     return { liked: false, error: "Board post not found." };
   }
-  if (!viewerCanAccessBoard(board.user_id, userDbId)) {
+  if (!(await viewerCanAccessBoard(board.user_id, userDbId))) {
     return { liked: false, error: "Board post not found." };
   }
   if (board.is_deleted === 1) {
@@ -337,39 +339,34 @@ export function toggleBoardLike(
     return { liked: false, error: "You cannot like your own post." };
   }
 
-  const existing = db
-    .prepare("SELECT id FROM likes WHERE board_id = ? AND user_id = ?")
-    .get(boardId, userDbId) as { id: number } | undefined;
+  const existing = await sqlGet<{ id: number }>(
+    "SELECT id FROM likes WHERE board_id = ? AND user_id = ?",
+    [boardId, userDbId],
+  );
 
   if (existing) {
-    db.prepare("DELETE FROM likes WHERE board_id = ? AND user_id = ?").run(
+    await sqlRun("DELETE FROM likes WHERE board_id = ? AND user_id = ?", [
       boardId,
       userDbId,
-    );
+    ]);
     return { liked: false };
   }
 
-  db.prepare(
-    "INSERT INTO likes (board_id, user_id) VALUES (?, ?)",
-  ).run(boardId, userDbId);
+  await sqlRun("INSERT INTO likes (board_id, user_id) VALUES (?, ?)", [
+    boardId,
+    userDbId,
+  ]);
   return { liked: true };
 }
 
-function getBoardById(
+async function getBoardById(
   boardId: number,
   viewerUserDbId: number,
-): { board?: BoardRow; error?: string } {
-  const db = getDb();
-  const row = db
-    .prepare(
-      `${SELECT_BODY} b.id = ? AND ${VIEWER_ACCESS_SQL} LIMIT 1`,
-    )
-    .get(
-      viewerUserDbId,
-      boardId,
-      viewerUserDbId,
-      viewerUserDbId,
-    ) as BoardDbRow | undefined;
+): Promise<{ board?: BoardRow; error?: string }> {
+  const row = await sqlGet<BoardDbRow>(
+    `${SELECT_BODY} b.id = ? AND ${VIEWER_ACCESS_SQL} LIMIT 1`,
+    [viewerUserDbId, boardId, viewerUserDbId, viewerUserDbId],
+  );
 
   if (!row) {
     return { error: "Board post not found." };

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { clearSessionCookie, getSessionUser } from "@/lib/auth";
-import { errorResponse } from "@/lib/api";
+import { errorResponse, withDbHandler } from "@/lib/api";
 
-export async function POST() {
+export const POST = withDbHandler(async () => {
   const user = await getSessionUser();
   if (!user) {
     return errorResponse("Not signed in.", 401);
@@ -12,4 +12,4 @@ export async function POST() {
   const cookie = clearSessionCookie();
   response.cookies.set(cookie.name, cookie.value, cookie.options);
   return response;
-}
+});

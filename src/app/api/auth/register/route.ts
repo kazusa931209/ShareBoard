@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { errorResponse } from "@/lib/api";
+import { errorResponse, withDbHandler } from "@/lib/api";
 import { registerUser, setSessionCookie } from "@/lib/auth";
 
-export async function POST(request: Request) {
+export const POST = withDbHandler(async (request) => {
   let body: unknown;
   try {
     body = await request.json();
@@ -24,4 +24,4 @@ export async function POST(request: Request) {
   const cookie = setSessionCookie(result.user);
   response.cookies.set(cookie.name, cookie.value, cookie.options);
   return response;
-}
+});

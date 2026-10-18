@@ -1,8 +1,8 @@
 import bcrypt from "bcryptjs";
 import { createHmac, timingSafeEqual } from "crypto";
 import { cookies } from "next/headers";
-import { getDb } from "@/lib/db";
 import { getAuthSecret, isProduction } from "@/lib/env";
+import { isUniqueConstraintError, sqlGet } from "@/lib/sql";
 import {
   normalizeUserId,
   validatePassword,
@@ -129,22 +129,20 @@ export async function registerUser(
 
   const userId = normalizeUserId(rawUserId);
   const passwordHash = await bcrypt.hash(password, 10);
-  const db = getDb();
 
   try {
-    const result = db
-      .prepare(
-        "INSERT INTO users (user_id, password_hash) VALUES (?, ?) RETURNING id, user_id",
-      )
-      .get(userId, passwordHash) as { id: number; user_id: string };
+    const result = await sqlGet<{ id: number; user_id: string }>(
+      "INSERT INTO users (user_id, password_hash) VALUES (?, ?) RETURNING id, user_id",
+      [userId, passwordHash],
+    );
+
+    if (!result) {
+      return { error: "Registration failed." };
+    }
 
     return { user: { id: result.id, userId: result.user_id } };
   } catch (err: unknown) {
-    if (
-      err instanceof Error &&
-      "code" in err &&
-      (err as { code?: string }).code === "SQLITE_CONSTRAINT_UNIQUE"
-    ) {
+    if (isUniqueConstraintError(err)) {
       return { error: "That User ID is already taken." };
     }
     throw err;
@@ -165,12 +163,13 @@ export async function loginUser(
   }
 
   const userId = normalizeUserId(rawUserId);
-  const db = getDb();
-  const row = db
-    .prepare("SELECT id, user_id, password_hash FROM users WHERE user_id = ?")
-    .get(userId) as
-    | { id: number; user_id: string; password_hash: string }
-    | undefined;
+  const row = await sqlGet<{
+    id: number;
+    user_id: string;
+    password_hash: string;
+  }>("SELECT id, user_id, password_hash FROM users WHERE user_id = ?", [
+    userId,
+  ]);
 
   if (!row) {
     return { error: "Invalid User ID or password." };

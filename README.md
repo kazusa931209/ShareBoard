@@ -37,8 +37,9 @@ Open [http://localhost:3000](http://localhost:3000), register a User ID, then us
 
 1. Copy `.env.example` values into `.env.production` on your server.
 2. Set a strong **`AUTH_SECRET`** (for example: `openssl rand -base64 32`).
-3. Set **`DATABASE_PATH`** (default: `./data/shareboard.prod.sqlite`).
-4. Build and start:
+3. **Vercel / serverless:** set **`TURSO_DATABASE_URL`** and **`TURSO_AUTH_TOKEN`** (see [doc/vercel.md](doc/vercel.md)). The app uses Turso when `NODE_ENV=production` and both are set.
+4. **VPS / long-running Node:** set **`DATABASE_PATH`** (default: `./data/shareboard.prod.sqlite`) and omit Turso vars.
+5. Build and start:
 
 ```bash
 npm install

@@ -1,81 +1,77 @@
 import Database from "better-sqlite3";
+import { AsyncLocalStorage } from "async_hooks";
 import fs from "fs";
 import path from "path";
-import { getDatabasePath } from "@/lib/env";
+import { getDatabasePath, isTursoEnabled } from "@/lib/env";
+import { SCHEMA_STATEMENTS } from "@/lib/schema";
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id TEXT NOT NULL COLLATE NOCASE UNIQUE,
-    password_hash TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    content TEXT NOT NULL CHECK (length(content) <= 2000),
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_posts_created_at ON posts(created_at DESC);
-
-  CREATE TABLE IF NOT EXISTS boards (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    title TEXT NOT NULL,
-    url TEXT,
-    content TEXT NOT NULL CHECK (length(content) <= 10000),
-    other TEXT CHECK (other IS NULL OR length(other) <= 10000),
-    post_datetime TEXT NOT NULL DEFAULT (datetime('now')),
-    is_deleted INTEGER NOT NULL DEFAULT 0 CHECK (is_deleted IN (0, 1)),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-  );
-
-  CREATE TABLE IF NOT EXISTS likes (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    board_id INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
-    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (board_id, user_id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_boards_sort ON boards (is_deleted, post_datetime DESC);
-  CREATE INDEX IF NOT EXISTS idx_boards_user_id ON boards (user_id);
-  CREATE INDEX IF NOT EXISTS idx_likes_board_id ON likes (board_id);
-  CREATE INDEX IF NOT EXISTS idx_likes_user_id ON likes (user_id);
-
-  CREATE TABLE IF NOT EXISTS share_with (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    owner_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    target_user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    UNIQUE (owner_user_id, target_user_id)
-  );
-
-  CREATE INDEX IF NOT EXISTS idx_share_with_owner ON share_with (owner_user_id);
-  CREATE INDEX IF NOT EXISTS idx_share_with_target ON share_with (target_user_id);
-`;
-
-let db: Database.Database | null = null;
+let localDb: Database.Database | null = null;
+const requestDb = new AsyncLocalStorage<Database.Database>();
 
 function resolveDbPath(): string {
   return path.resolve(process.cwd(), getDatabasePath());
 }
 
-export function getDb(): Database.Database {
-  if (db) {
-    return db;
+function openDatabase(filePath: string): Database.Database {
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+  const connection = new Database(filePath);
+  connection.pragma("foreign_keys = ON");
+  connection.pragma("busy_timeout = 5000");
+
+  if (process.env.VERCEL) {
+    connection.pragma("journal_mode = DELETE");
+  } else {
+    connection.pragma("journal_mode = WAL");
+  }
+
+  for (const statement of SCHEMA_STATEMENTS) {
+    connection.exec(statement);
+  }
+  return connection;
+}
+
+/**
+ * Wrap API handlers that touch the local SQLite file (skipped when using Turso).
+ */
+export async function runWithDb<T>(fn: () => T | Promise<T>): Promise<T> {
+  if (isTursoEnabled()) {
+    return await fn();
+  }
+
+  if (!process.env.VERCEL) {
+    return await fn();
   }
 
   const filePath = resolveDbPath();
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
+  const connection = openDatabase(filePath);
 
-  db = new Database(filePath);
-  db.pragma("journal_mode = WAL");
-  db.pragma("foreign_keys = ON");
-  db.exec(SCHEMA);
+  return requestDb.run(connection, async () => {
+    try {
+      return await fn();
+    } finally {
+      connection.close();
+    }
+  });
+}
 
-  return db;
+export function getDb(): Database.Database {
+  if (isTursoEnabled()) {
+    throw new Error("getDb() is not used with Turso; use sqlGet/sqlAll/sqlRun.");
+  }
+
+  if (process.env.VERCEL) {
+    const scoped = requestDb.getStore();
+    if (!scoped) {
+      throw new Error("getDb() on Vercel must run inside runWithDb().");
+    }
+    return scoped;
+  }
+
+  if (localDb) {
+    return localDb;
+  }
+
+  localDb = openDatabase(resolveDbPath());
+  return localDb;
 }

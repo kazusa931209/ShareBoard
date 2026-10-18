@@ -1,8 +1,8 @@
 import { getSessionUser } from "@/lib/auth";
-import { errorResponse, jsonResponse } from "@/lib/api";
+import { errorResponse, jsonResponse, withDbHandler } from "@/lib/api";
 import { listShareWithUsers } from "@/lib/share-with";
 
-export async function GET(request: Request) {
+export const GET = withDbHandler(async (request) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in required.", 401);
@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   const pageSize = Number.parseInt(searchParams.get("pageSize") ?? "20", 10);
   const keyword = searchParams.get("keyword") ?? undefined;
 
-  const result = listShareWithUsers({
+  const result = await listShareWithUsers({
     ownerUserDbId: session.id,
     page: Number.isFinite(page) ? page : 1,
     pageSize: Number.isFinite(pageSize) ? pageSize : 20,
@@ -27,4 +27,4 @@ export async function GET(request: Request) {
     pageSize: result.pageSize,
     totalPages: result.totalPages,
   });
-}
+});

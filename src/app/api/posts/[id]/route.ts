@@ -1,10 +1,8 @@
 import { getSessionUser } from "@/lib/auth";
-import { errorResponse, jsonResponse } from "@/lib/api";
+import { errorResponse, jsonResponse, withDbHandlerContext } from "@/lib/api";
 import { deletePost } from "@/lib/posts";
 
-type RouteContext = { params: Promise<{ id: string }> };
-
-export async function DELETE(_request: Request, context: RouteContext) {
+export const DELETE = withDbHandlerContext(async (_request, context) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in to delete posts.", 401);
@@ -16,10 +14,10 @@ export async function DELETE(_request: Request, context: RouteContext) {
     return errorResponse("Invalid post id.");
   }
 
-  const result = deletePost(postId, session.id);
+  const result = await deletePost(postId, session.id);
   if (!result.ok) {
     return errorResponse(result.error ?? "Delete failed.", 403);
   }
 
   return jsonResponse({ ok: true });
-}
+});

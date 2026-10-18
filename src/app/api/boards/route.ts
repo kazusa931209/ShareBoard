@@ -1,5 +1,5 @@
 import { getSessionUser } from "@/lib/auth";
-import { errorResponse, jsonResponse } from "@/lib/api";
+import { errorResponse, jsonResponse, withDbHandler } from "@/lib/api";
 import {
   createBoard,
   listBoards,
@@ -25,7 +25,7 @@ function parseLikeFilter(value: string | null): LikeFilter {
   return "all";
 }
 
-export async function GET(request: Request) {
+export const GET = withDbHandler(async (request) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in required.", 401);
@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const dateTo = searchParams.get("dateTo") ?? undefined;
   const likeFilter = parseLikeFilter(searchParams.get("likeFilter"));
 
-  const result = listBoards({
+  const result = await listBoards({
     page: Number.isFinite(page) ? page : 1,
     pageSize: Number.isFinite(pageSize) ? pageSize : 20,
     keyword,
@@ -52,9 +52,9 @@ export async function GET(request: Request) {
   });
 
   return jsonResponse(result);
-}
+});
 
-export async function POST(request: Request) {
+export const POST = withDbHandler(async (request) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in required.", 401);
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     other?: string;
   };
 
-  const result = createBoard(session.id, {
+  const result = await createBoard(session.id, {
     title: title ?? "",
     url,
     content: content ?? "",
@@ -86,4 +86,4 @@ export async function POST(request: Request) {
   }
 
   return jsonResponse({ board: result.board }, { status: 201 });
-}
+});

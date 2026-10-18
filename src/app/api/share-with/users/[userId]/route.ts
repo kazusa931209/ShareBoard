@@ -1,10 +1,8 @@
 import { getSessionUser } from "@/lib/auth";
-import { errorResponse, jsonResponse } from "@/lib/api";
+import { errorResponse, jsonResponse, withDbHandlerContext } from "@/lib/api";
 import { setShareWithUser } from "@/lib/share-with";
 
-type RouteContext = { params: Promise<{ userId: string }> };
-
-export async function PUT(request: Request, context: RouteContext) {
+export const PUT = withDbHandlerContext(async (request, context) => {
   const session = await getSessionUser();
   if (!session) {
     return errorResponse("Sign in required.", 401);
@@ -24,10 +22,10 @@ export async function PUT(request: Request, context: RouteContext) {
     return errorResponse("shared (boolean) is required.");
   }
 
-  const result = setShareWithUser(session.id, targetUserId, shared);
+  const result = await setShareWithUser(session.id, targetUserId, shared);
   if (!result.ok) {
     return errorResponse(result.error ?? "Update failed.", 400);
   }
 
   return jsonResponse({ ok: true, shared });
-}
+});

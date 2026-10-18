@@ -1,6 +1,6 @@
 # Deploy ShareBoard on Vercel
 
-This guide covers deploying the ShareBoard Next.js app to [Vercel](https://vercel.com/). Use it for previews and small demos; for a friends-and-family board with **reliable, persistent data**, prefer a host with a writable disk (VPS, Railway, Fly.io, etc.)—see [Production](../README.md#production) in the main README.
+This guide covers deploying the ShareBoard Next.js app to [Vercel](https://vercel.com/). **Production** uses [Turso](https://turso.tech/) (libSQL) for persistent data; local development keeps using a SQLite file under `./data/`.
 
 ## Before you deploy
 
@@ -8,33 +8,41 @@ This guide covers deploying the ShareBoard Next.js app to [Vercel](https://verce
 |-------------|--------|
 | **Git repository** | Push the project to GitHub, GitLab, or Bitbucket. Vercel imports from Git. |
 | **Node.js 20+** | Matches `engines` in `package.json`. Set in Vercel project settings if needed. |
-| **`AUTH_SECRET`** | At least 16 characters. Generate with `openssl rand -base64 32`. **Required** in Vercel; do not use the dev placeholder. |
-| **`DATABASE_PATH`** | See [SQLite on Vercel](#sqlite-on-vercel) below. |
+| **Turso database** | Create a DB in the Turso dashboard or CLI; copy URL + auth token. |
+| **`AUTH_SECRET`** | At least 16 characters. Generate with `openssl rand -base64 32`. |
 
-The repo already sets `serverExternalPackages: ["better-sqlite3"]` in `next.config.ts` so the native SQLite driver bundles correctly on Vercel.
+The repo sets `serverExternalPackages: ["better-sqlite3"]` in `next.config.ts` for local SQLite only; Turso uses `@libsql/client` over HTTPS.
 
-## SQLite on Vercel
+## Turso setup
 
-ShareBoard stores data in a **SQLite file** on disk (`src/lib/db.ts` resolves `DATABASE_PATH` relative to the process working directory).
+1. Install the [Turso CLI](https://docs.turso.tech/cli) and sign in, or use the Turso web console.
+2. Create a database, for example `shareboard`.
+3. Get the URL and token:
 
-On Vercel, API routes run as **serverless functions** with an **ephemeral** filesystem:
+```bash
+turso db show shareboard --url
+turso db tokens create shareboard
+```
 
-- A path like `./data/shareboard.prod.sqlite` inside the project tree is **not durable** across deploys, instances, or regions.
-- Data can appear to work briefly, then **reset or diverge** between requests.
+4. Add `TURSO_DATABASE_URL` and `TURSO_AUTH_TOKEN` to Vercel (see below). Schema tables are created automatically on first API request (`src/lib/schema.ts`).
 
-**Practical options:**
-
-1. **Demo / try-out only** — Set `DATABASE_PATH` to a path under `/tmp`, for example `/tmp/shareboard.sqlite`. The app creates the schema on first request. Expect **data loss**; do not rely on this for production.
-2. **Real production** — Run ShareBoard on a VM or PaaS with persistent storage, or migrate the app to a hosted database (PostgreSQL, Turso, etc.) before treating Vercel as the primary backend.
+When `NODE_ENV=production` and both Turso variables are set, the app **does not** use the local SQLite file on disk.
 
 ## Environment variables
 
-In the Vercel project: **Settings → Environment Variables**. Add these for **Production** (and **Preview** if you want previews to work):
+In the Vercel project: **Settings → Environment Variables**. Add these for **Production** (and **Preview** if branch previews should share the same DB):
 
 | Name | Example | Description |
 |------|---------|-------------|
 | `AUTH_SECRET` | *(random 32+ byte string)* | Signs session cookies. Must be ≥ 16 characters. |
-| `DATABASE_PATH` | `./data/shareboard.prod.sqlite` *(or `/tmp/shareboard.prod.sqlite`)* | You may keep the same `./data/...` value as on a VPS; on Vercel the app remaps it to `/tmp/<filename>` because only `/tmp` is writable. Data is still ephemeral. |
+| `TURSO_DATABASE_URL` | `libsql://shareboard-….turso.io` | From `turso db show … --url` |
+| `TURSO_AUTH_TOKEN` | *(token string)* | From `turso db tokens create …` |
+
+`DATABASE_PATH` is optional on Vercel when Turso is configured (used only if Turso vars are missing).
+
+## SQLite on Vercel (fallback only)
+
+If Turso env vars are **not** set in production, the app falls back to a SQLite file (`DATABASE_PATH`, remapped to `/tmp/…` on Vercel). That storage is **ephemeral** — not suitable for a real board. Prefer Turso.
 
 Do **not** commit production secrets. Vercel injects env vars at build and runtime; local `.env` is gitignored.
 
@@ -134,6 +142,18 @@ Add `AUTH_SECRET` in Vercel environment variables for the target environment (Pr
 ### Data disappears after redeploy or between users
 
 Expected when using ephemeral storage or `/tmp`. Move to a persistent server or external database for lasting data.
+
+### Login suddenly fails (“Invalid User ID or password”) after it worked yesterday
+
+Two separate issues are common on Vercel:
+
+1. **Ephemeral database** — Users and posts live in `/tmp/...` (or a remapped path). After a **cold start**, **redeploy**, or a **new serverless instance**, that file can be **empty**. Your account from yesterday is not on that instance, so login correctly returns “invalid credentials.” **Register again** on the new instance, or host on a machine with persistent disk.
+
+2. **SQLite + warm lambdas (fixed in app code)** — A single global `better-sqlite3` connection on a reused function caused **300s timeouts**, `Statement::~Statement()` crashes, and `SIGABRT` in logs. API routes now use **one connection per request** (`runWithDb` / `withDbHandler`). Deploy the latest code if you still see those errors.
+
+### `Task timed out after 300 seconds` on `/api/auth/login`
+
+Usually **SQLite lock** or a **stuck native crash** from reusing one DB connection across concurrent requests on the same function instance. Update to the latest commit with per-request DB handling and redeploy.
 
 ## Related docs
 

@@ -26,3 +26,29 @@ export function getAuthSecret(): string {
 export function isProduction(): boolean {
   return process.env.NODE_ENV === "production";
 }
+
+/** Production with Turso credentials uses remote libSQL instead of local SQLite. */
+export function isTursoEnabled(): boolean {
+  if (!isProduction()) {
+    return false;
+  }
+  const url = process.env.TURSO_DATABASE_URL?.trim();
+  const token = process.env.TURSO_AUTH_TOKEN?.trim();
+  return Boolean(url && token);
+}
+
+export function getTursoDatabaseUrl(): string {
+  const url = process.env.TURSO_DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error("TURSO_DATABASE_URL is required when using Turso.");
+  }
+  return url;
+}
+
+export function getTursoAuthToken(): string {
+  const token = process.env.TURSO_AUTH_TOKEN?.trim();
+  if (!token) {
+    throw new Error("TURSO_AUTH_TOKEN is required when using Turso.");
+  }
+  return token;
+}

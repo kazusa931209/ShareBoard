@@ -1,4 +1,4 @@
-import { getDb } from "@/lib/db";
+import { sqlAll, sqlGet, sqlRun } from "@/lib/sql";
 
 export type ShareWithUser = {
   userId: string;
@@ -25,9 +25,9 @@ type ShareUserRow = {
   shared: number;
 };
 
-export function listShareWithUsers(
+export async function listShareWithUsers(
   params: ListShareWithUsersParams,
-): ListShareWithUsersResult {
+): Promise<ListShareWithUsersResult> {
   const page = Math.max(1, params.page);
   const pageSize = Math.min(100, Math.max(1, params.pageSize));
   const keyword = params.keyword?.trim();
@@ -41,20 +41,19 @@ export function listShareWithUsers(
   }
 
   const where = conditions.join(" AND ");
-  const db = getDb();
 
-  const countRow = db
-    .prepare(`SELECT COUNT(*) AS total FROM users u WHERE ${where}`)
-    .get(...bindings) as { total: number };
+  const countRow = await sqlGet<{ total: number }>(
+    `SELECT COUNT(*) AS total FROM users u WHERE ${where}`,
+    bindings,
+  );
 
-  const total = countRow.total;
+  const total = countRow?.total ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const safePage = Math.min(page, totalPages);
   const offset = (safePage - 1) * pageSize;
 
-  const rows = db
-    .prepare(
-      `
+  const rows = await sqlAll<ShareUserRow>(
+    `
       SELECT u.user_id AS userId,
         EXISTS (
           SELECT 1 FROM share_with s
@@ -65,8 +64,8 @@ export function listShareWithUsers(
       ORDER BY u.user_id COLLATE NOCASE ASC
       LIMIT ? OFFSET ?
     `,
-    )
-    .all(params.ownerUserDbId, ...bindings, pageSize, offset) as ShareUserRow[];
+    [params.ownerUserDbId, ...bindings, pageSize, offset],
+  );
 
   return {
     items: rows.map((row) => ({
@@ -80,15 +79,15 @@ export function listShareWithUsers(
   };
 }
 
-export function setShareWithUser(
+export async function setShareWithUser(
   ownerUserDbId: number,
   targetUserId: string,
   shared: boolean,
-): { ok: boolean; error?: string } {
-  const db = getDb();
-  const target = db
-    .prepare("SELECT id FROM users WHERE user_id = ?")
-    .get(targetUserId) as { id: number } | undefined;
+): Promise<{ ok: boolean; error?: string }> {
+  const target = await sqlGet<{ id: number }>(
+    "SELECT id FROM users WHERE user_id = ?",
+    [targetUserId],
+  );
 
   if (!target) {
     return { ok: false, error: "User not found." };
@@ -98,17 +97,19 @@ export function setShareWithUser(
   }
 
   if (shared) {
-    db.prepare(
+    await sqlRun(
       `
       INSERT INTO share_with (owner_user_id, target_user_id)
       VALUES (?, ?)
       ON CONFLICT(owner_user_id, target_user_id) DO NOTHING
     `,
-    ).run(ownerUserDbId, target.id);
+      [ownerUserDbId, target.id],
+    );
   } else {
-    db.prepare(
+    await sqlRun(
       "DELETE FROM share_with WHERE owner_user_id = ? AND target_user_id = ?",
-    ).run(ownerUserDbId, target.id);
+      [ownerUserDbId, target.id],
+    );
   }
 
   return { ok: true };
