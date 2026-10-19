@@ -250,66 +250,66 @@ export function BoardListSection({
           ) : undefined
         }
       >
-          <FilterKeywordField
-            value={filters.keyword}
-            onChange={(keyword) =>
-              setFilters((f) => ({ ...f, keyword }))
+        <FilterKeywordField
+          value={filters.keyword}
+          onChange={(keyword) =>
+            setFilters((f) => ({ ...f, keyword }))
+          }
+        />
+        <label className="board-filter-item">
+          <span className="board-filter-label">Search in</span>
+          <select
+            value={filters.keywordField}
+            onChange={(e) =>
+              setFilters((f) => ({
+                ...f,
+                keywordField: e.target.value as BoardSearchField,
+              }))
+            }
+          >
+            <option value="title">Title</option>
+            <option value="content">Content</option>
+            <option value="other">Other</option>
+            <option value="poster">Poster User ID</option>
+          </select>
+        </label>
+        <label className="board-filter-item">
+          <span className="board-filter-label">Date from</span>
+          <input
+            type="date"
+            value={filters.dateFrom}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, dateFrom: e.target.value }))
             }
           />
-          <label className="board-filter-item">
-            <span className="board-filter-label">Search in</span>
-            <select
-              value={filters.keywordField}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  keywordField: e.target.value as BoardSearchField,
-                }))
-              }
-            >
-              <option value="title">Title</option>
-              <option value="content">Content</option>
-              <option value="other">Other</option>
-              <option value="poster">Poster User ID</option>
-            </select>
-          </label>
-          <label className="board-filter-item">
-            <span className="board-filter-label">Date from</span>
-            <input
-              type="date"
-              value={filters.dateFrom}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, dateFrom: e.target.value }))
-              }
-            />
-          </label>
-          <label className="board-filter-item">
-            <span className="board-filter-label">Date to</span>
-            <input
-              type="date"
-              value={filters.dateTo}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, dateTo: e.target.value }))
-              }
-            />
-          </label>
-          <label className="board-filter-item">
-            <span className="board-filter-label">Like filter</span>
-            <select
-              value={filters.likeFilter}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  likeFilter: e.target.value as LikeFilter,
-                }))
-              }
-            >
-              <option value="all">All</option>
-              <option value="like">Like</option>
-              <option value="not_yet">Not Yet</option>
-            </select>
-          </label>
-          <FilterResetSearch onReset={handleReset} onSearch={handleSearch} />
+        </label>
+        <label className="board-filter-item">
+          <span className="board-filter-label">Date to</span>
+          <input
+            type="date"
+            value={filters.dateTo}
+            onChange={(e) =>
+              setFilters((f) => ({ ...f, dateTo: e.target.value }))
+            }
+          />
+        </label>
+        <label className="board-filter-item">
+          <span className="board-filter-label">Like filter</span>
+          <select
+            value={filters.likeFilter}
+            onChange={(e) =>
+              setFilters((f) => ({
+                ...f,
+                likeFilter: e.target.value as LikeFilter,
+              }))
+            }
+          >
+            <option value="all">All</option>
+            <option value="like">Like</option>
+            <option value="not_yet">Not Yet</option>
+          </select>
+        </label>
+        <FilterResetSearch onReset={handleReset} onSearch={handleSearch} />
       </FilterToolbar>
 
       <ErrorMessage message={error} />
@@ -332,167 +332,167 @@ export function BoardListSection({
         isEmpty={items.length === 0}
         emptyMessage="No records found."
       >
-                {items.map((row, index) => {
-                  const rowNo = (currentPage - 1) * pageSize + index + 1;
-                  const isOwner =
-                    row.posterUserId.toLowerCase() ===
-                    currentUserId.toLowerCase();
-                  return (
-                    <tr
-                      key={row.id}
-                      className={
-                        row.isDeleted
-                          ? "board-row--deleted board-row--clickable"
-                          : "board-row--clickable"
-                      }
-                      onClick={() => openView(row)}
+        {items.map((row, index) => {
+          const rowNo = (currentPage - 1) * pageSize + index + 1;
+          const isOwner =
+            row.posterUserId.toLowerCase() ===
+            currentUserId.toLowerCase();
+          return (
+            <tr
+              key={row.id}
+              className={
+                row.isDeleted
+                  ? "board-row--deleted board-row--clickable"
+                  : "board-row--clickable"
+              }
+              onClick={() => openView(row)}
+            >
+              <td className={BOARD_TABLE_COLUMN_CLASSES[0]}>
+                {rowNo}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[1]} board-cell-title`}
+              >
+                <span className="board-title-line">{row.title}</span>
+                <span
+                  className="board-url-mobile"
+                  onClick={stopRowClick}
+                  onKeyDown={(e) => e.stopPropagation()}
+                >
+                  {row.url ? (
+                    <a
+                      href={row.url}
+                      target="_blank"
+                      rel="noreferrer"
                     >
-                      <td className={BOARD_TABLE_COLUMN_CLASSES[0]}>
-                        {rowNo}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[1]} board-cell-title`}
-                      >
-                        <span className="board-title-line">{row.title}</span>
-                        <span
-                          className="board-url-mobile"
-                          onClick={stopRowClick}
-                          onKeyDown={(e) => e.stopPropagation()}
-                        >
-                          {row.url ? (
-                            <a
-                              href={row.url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              {row.url}
-                            </a>
-                          ) : (
-                            <span className="muted">—</span>
-                          )}
-                        </span>
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[2]} board-cell-url board-col-desktop-only`}
-                        onClick={stopRowClick}
-                      >
-                        {row.url ? (
-                          <a href={row.url} target="_blank" rel="noreferrer">
-                            {row.url}
-                          </a>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[3]} board-cell-text board-col-desktop-only`}
-                        title={
-                          row.content.length > TEXT_PREVIEW_LENGTH
-                            ? row.content
-                            : undefined
+                      {row.url}
+                    </a>
+                  ) : (
+                    <span className="muted">—</span>
+                  )}
+                </span>
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[2]} board-cell-url board-col-desktop-only`}
+                onClick={stopRowClick}
+              >
+                {row.url ? (
+                  <a href={row.url} target="_blank" rel="noreferrer">
+                    {row.url}
+                  </a>
+                ) : (
+                  "—"
+                )}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[3]} board-cell-text board-col-desktop-only`}
+                title={
+                  row.content.length > TEXT_PREVIEW_LENGTH
+                    ? row.content
+                    : undefined
+                }
+              >
+                {truncateText(row.content, TEXT_PREVIEW_LENGTH)}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[4]} board-cell-text board-col-desktop-only`}
+                title={
+                  row.other && row.other.length > TEXT_PREVIEW_LENGTH
+                    ? row.other
+                    : undefined
+                }
+              >
+                {row.other
+                  ? truncateText(row.other, TEXT_PREVIEW_LENGTH)
+                  : "—"}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[5]} board-col-desktop-only`}
+              >
+                {row.posterUserId}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[6]} board-cell-like`}
+                onClick={stopRowClick}
+              >
+                <div className="board-like-cell">
+                  <button
+                    type="button"
+                    className={
+                      row.likedByMe
+                        ? "board-like-block-btn board-like-block-btn--on"
+                        : "board-like-block-btn"
+                    }
+                    disabled={row.isDeleted || isOwner}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      void toggleLike(row);
+                    }}
+                    title={
+                      isOwner
+                        ? "You cannot like your own post"
+                        : row.likedByMe
+                          ? "Remove your like"
+                          : "Like this post"
+                    }
+                  >
+                    <svg
+                      className="board-like-block-btn-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
+                        fill={
+                          row.likedByMe ? "currentColor" : "none"
                         }
-                      >
-                        {truncateText(row.content, TEXT_PREVIEW_LENGTH)}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[4]} board-cell-text board-col-desktop-only`}
-                        title={
-                          row.other && row.other.length > TEXT_PREVIEW_LENGTH
-                            ? row.other
-                            : undefined
-                        }
-                      >
-                        {row.other
-                          ? truncateText(row.other, TEXT_PREVIEW_LENGTH)
-                          : "—"}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[5]} board-col-desktop-only`}
-                      >
-                        {row.posterUserId}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[6]} board-cell-like`}
-                        onClick={stopRowClick}
-                      >
-                        <div className="board-like-cell">
-                          <button
-                            type="button"
-                            className={
-                              row.likedByMe
-                                ? "board-like-block-btn board-like-block-btn--on"
-                                : "board-like-block-btn"
-                            }
-                            disabled={row.isDeleted || isOwner}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              void toggleLike(row);
-                            }}
-                            title={
-                              isOwner
-                                ? "You cannot like your own post"
-                                : row.likedByMe
-                                  ? "Remove your like"
-                                  : "Like this post"
-                            }
-                          >
-                            <svg
-                              className="board-like-block-btn-icon"
-                              viewBox="0 0 24 24"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"
-                                fill={
-                                  row.likedByMe ? "currentColor" : "none"
-                                }
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                            <span>{row.likedByMe ? "Liked" : "Like"}</span>
-                          </button>
-                          <span className="board-like-users muted">
-                            {row.likedUserIds.join(", ") || "—"}
-                          </span>
-                        </div>
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[7]} board-col-desktop-only`}
-                      >
-                        {formatBoardDateTime(row.postDatetime)}
-                      </td>
-                      <td
-                        className={`${BOARD_TABLE_COLUMN_CLASSES[8]} board-cell-actions`}
-                        onClick={stopRowClick}
-                      >
-                        {isOwner && !row.isDeleted ? (
-                          <>
-                            <Button
-                              type="button"
-                              className="btn-ghost board-btn-sm"
-                              onClick={() => openEdit(row)}
-                            >
-                              Edit
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="danger"
-                              className="board-btn-sm"
-                              onClick={() => void handleDelete(row)}
-                            >
-                              Delete
-                            </Button>
-                          </>
-                        ) : (
-                          "—"
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    <span>{row.likedByMe ? "Liked" : "Like"}</span>
+                  </button>
+                  <span className="board-like-users muted">
+                    {row.likedUserIds.join(", ") || "—"}
+                  </span>
+                </div>
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[7]} board-col-desktop-only`}
+              >
+                {formatBoardDateTime(row.postDatetime)}
+              </td>
+              <td
+                className={`${BOARD_TABLE_COLUMN_CLASSES[8]} board-cell-actions`}
+                onClick={stopRowClick}
+              >
+                {isOwner && !row.isDeleted ? (
+                  <>
+                    <Button
+                      type="button"
+                      className="btn-ghost board-btn-sm"
+                      onClick={() => openEdit(row)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="board-btn-sm"
+                      onClick={() => void handleDelete(row)}
+                    >
+                      Delete
+                    </Button>
+                  </>
+                ) : (
+                  "—"
+                )}
+              </td>
+            </tr>
+          );
+        })}
       </DataTable>
 
       <TablePagination
