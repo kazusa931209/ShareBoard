@@ -12,7 +12,7 @@
   "dependencies": {
     "@libsql/client": "^0.15.15",
     "bcryptjs": "^3.0.2",
-    "better-sqlite3": "^11.10.0",
+    "better-sqlite3": "^13.0.3",
     "next": "^15.5.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
@@ -28,6 +28,6 @@
     "typescript": "^5.9.2"
   },
   "engines": {
-    "node": ">=20"
+    "node": ">=22 <26"
   }
 }

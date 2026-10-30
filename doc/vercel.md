@@ -7,7 +7,7 @@ This guide covers deploying the ShareBoard Next.js app to [Vercel](https://verce
 | Requirement | Notes |
 |-------------|--------|
 | **Git repository** | Push the project to GitHub, GitLab, or Bitbucket. Vercel imports from Git. |
-| **Node.js 20+** | Matches `engines` in `package.json`. Set in Vercel project settings if needed. |
+| **Node.js 22.x or 24.x** | Matches `engines` in `package.json` (`>=22 <26`). In Vercel **Settings → General → Node.js Version**, choose **22.x** or **24.x** — not an open-ended range that resolves to **26.x** (breaks `better-sqlite3`). |
 | **Turso database** | Create a DB in the Turso dashboard or CLI; copy URL + auth token. |
 | **`AUTH_SECRET`** | At least 16 characters. Generate with `openssl rand -base64 32`. |
 
@@ -126,7 +126,7 @@ After pulling the latest repo, `vercel.json` also declares `"framework": "nextjs
 
 ### Build fails on `better-sqlite3`
 
-- Ensure **Node 20** is selected in Vercel.
+- Ensure **Node 22.x or 24.x** is selected in Vercel and `engines.node` stays below 26 (not open-ended `>=20`).
 - Confirm `next.config.ts` includes `serverExternalPackages: ["better-sqlite3"]`.
 - Check the build log for native compile errors; retry after clearing the build cache (**Deployments → … → Redeploy** with cache cleared).
 
