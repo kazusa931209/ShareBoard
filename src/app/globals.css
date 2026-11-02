@@ -763,7 +763,7 @@ select {
   }
 
   .board-table-wrap--list thead .board-col-title::after {
-    content: "Title / URL";
+    content: "Title / Date / URL";
     font-size: 0.8rem;
     font-weight: 600;
     line-height: normal;
@@ -777,14 +777,27 @@ select {
   }
 
   .board-url-mobile {
-    display: block;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35rem 0.5rem;
     margin-top: 0.35rem;
     font-size: 0.75rem;
     line-height: 1.35;
+  }
+
+  .board-url-mobile-date {
+    flex-shrink: 0;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .board-url-mobile-url {
+    min-width: 0;
     word-break: break-word;
   }
 
-  .board-url-mobile a {
+  .board-url-mobile-url a {
     color: var(--link);
     text-decoration: underline;
   }

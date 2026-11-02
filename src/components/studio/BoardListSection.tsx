@@ -359,17 +359,25 @@ export function BoardListSection({
                   onClick={stopRowClick}
                   onKeyDown={(e) => e.stopPropagation()}
                 >
-                  {row.url ? (
-                    <a
-                      href={row.url}
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      {row.url}
-                    </a>
-                  ) : (
-                    <span className="muted">—</span>
-                  )}
+                  <time
+                    className="board-url-mobile-date"
+                    dateTime={row.postDatetime}
+                  >
+                    {formatBoardDateTime(row.postDatetime)}
+                  </time>
+                  <span className="board-url-mobile-url">
+                    {row.url ? (
+                      <a
+                        href={row.url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {row.url}
+                      </a>
+                    ) : (
+                      <span className="muted">—</span>
+                    )}
+                  </span>
                 </span>
               </td>
               <td
