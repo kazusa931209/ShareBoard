@@ -29,6 +29,7 @@ type BoardDrawerProps = {
   error: string | null;
   onClose: () => void;
   onSubmit: (values: BoardFormValues) => void;
+  onEdit?: () => void;
 };
 
 function drawerTitle(mode: BoardDrawerMode): string {
@@ -50,6 +51,7 @@ export function BoardDrawer({
   error,
   onClose,
   onSubmit,
+  onEdit,
 }: BoardDrawerProps) {
   const [form, setForm] = useState<BoardFormValues>(emptyForm);
 
@@ -133,8 +135,13 @@ export function BoardDrawer({
             </dl>
             <div className="board-drawer-actions">
               <Button type="button" className="btn-ghost" onClick={onClose}>
-                Close
+                Cancel
               </Button>
+              {onEdit ? (
+                <Button type="button" onClick={onEdit}>
+                  Edit
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : (

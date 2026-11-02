@@ -523,6 +523,16 @@ export function BoardListSection({
         error={drawerError}
         onClose={() => setDrawerOpen(false)}
         onSubmit={(values) => void submitDrawer(values)}
+        onEdit={
+          editingRow &&
+          editingRow.posterUserId === currentUserId &&
+          !editingRow.isDeleted
+            ? () => {
+                setDrawerMode("edit");
+                setDrawerError(null);
+              }
+            : undefined
+        }
       />
     </>
   );
