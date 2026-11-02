@@ -71,17 +71,38 @@ export function BoardDrawer({
     }
   }, [open, mode, initial]);
 
+  useEffect(() => {
+    if (!open || mode !== "view") {
+      return;
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, mode, onClose]);
+
   if (!open) {
     return null;
   }
+
+  const dismissOnOverlay = mode === "view";
 
   return (
     <>
       <button
         type="button"
-        className="board-drawer-backdrop"
-        aria-label="Close drawer"
-        onClick={onClose}
+        className={
+          dismissOnOverlay
+            ? "board-drawer-backdrop"
+            : "board-drawer-backdrop board-drawer-backdrop--locked"
+        }
+        aria-label={dismissOnOverlay ? "Close drawer" : undefined}
+        tabIndex={dismissOnOverlay ? 0 : -1}
+        onClick={dismissOnOverlay ? onClose : undefined}
       />
       <aside
         className="board-drawer"

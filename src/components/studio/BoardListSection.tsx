@@ -354,11 +354,7 @@ export function BoardListSection({
                 className={`${BOARD_TABLE_COLUMN_CLASSES[1]} board-cell-title`}
               >
                 <span className="board-title-line">{row.title}</span>
-                <span
-                  className="board-url-mobile"
-                  onClick={stopRowClick}
-                  onKeyDown={(e) => e.stopPropagation()}
-                >
+                <span className="board-url-mobile">
                   <time
                     className="board-url-mobile-date"
                     dateTime={row.postDatetime}
@@ -371,6 +367,7 @@ export function BoardListSection({
                         href={row.url}
                         target="_blank"
                         rel="noreferrer"
+                        onClick={stopRowClick}
                       >
                         {row.url}
                       </a>
@@ -481,7 +478,10 @@ export function BoardListSection({
                     <Button
                       type="button"
                       className="btn-ghost board-btn-sm"
-                      onClick={() => openEdit(row)}
+                      onClick={(e) => {
+                        stopRowClick(e);
+                        openEdit(row);
+                      }}
                     >
                       Edit
                     </Button>
@@ -489,7 +489,10 @@ export function BoardListSection({
                       type="button"
                       variant="danger"
                       className="board-btn-sm"
-                      onClick={() => void handleDelete(row)}
+                      onClick={(e) => {
+                        stopRowClick(e);
+                        void handleDelete(row);
+                      }}
                     >
                       Delete
                     </Button>
